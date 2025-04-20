@@ -11,6 +11,8 @@ public class PathDrawer : MonoBehaviour
     {
         public PointType pointType;
     }
+[SerializeField] private MeshRenderer startPointRenderer;
+[SerializeField] private MeshRenderer endPointRenderer;
 
     public LineRenderer mainLineRenderer;
     public LineRenderer previewLineRenderer;
@@ -36,7 +38,7 @@ public class PathDrawer : MonoBehaviour
         previewLineRenderer.useWorldSpace = true;
         previewLineRenderer.widthMultiplier = 2f;
 
-        // 머티리얼 설정
+        // ??????? ????
         // lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
         previewLineRenderer.startColor = Color.green;
         previewLineRenderer.endColor = Color.green;
@@ -47,7 +49,7 @@ public class PathDrawer : MonoBehaviour
         {
             mouseDownWorldPos = Mouse.current.position.ReadValue();
             touchedStartPoint = CheckStartPoint();
-            UpdatePreviewLine(); // 초기화
+            UpdatePreviewLine(); // ????
         }
         if (Mouse.current.leftButton.isPressed)
         {
@@ -59,7 +61,9 @@ public class PathDrawer : MonoBehaviour
             }
         }
 
-        if(Mouse.current.leftButton.wasReleasedThisFrame) {
+        SetPointFeedback(CheckStartPoint(), CheckEndPoint());
+
+        if (Mouse.current.leftButton.wasReleasedThisFrame) {
 
             touchedEndPoint = CheckEndPoint();
 
@@ -79,7 +83,7 @@ public class PathDrawer : MonoBehaviour
             }
             else
             {
-                Debug.Log("무효 경로! previewLineRenderer 제거");
+                Debug.Log("??? ???! previewLineRenderer ????");
             }
 
             ClearPreviewLine();
@@ -107,7 +111,7 @@ public class PathDrawer : MonoBehaviour
         float distToA = Vector3.Distance(start, resourcePos);
         float distToB = Vector3.Distance(start, deliveryPos);
 
-        // 만약 시작점이 B에 더 가까우면 → 경로 뒤집기
+        // ???? ???????? B?? ?? ?????? ?? ??? ??????
         if (distToB > distToA)
         {
             drawnPath.Reverse();
@@ -154,5 +158,10 @@ public class PathDrawer : MonoBehaviour
     {
         mainLineRenderer.positionCount = drawnPath.Count;
         mainLineRenderer.SetPositions(drawnPath.ToArray());
+    }
+
+    private void SetPointFeedback(bool isStartValid, bool isEndValid) {
+    startPointRenderer.material.color = isStartValid ? Color.green : Color.white;
+    endPointRenderer.material.color = isEndValid ? Color.green : Color.white;
     }
 }

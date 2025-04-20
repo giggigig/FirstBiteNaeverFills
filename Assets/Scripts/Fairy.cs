@@ -10,10 +10,19 @@ public enum FairyState
     MoveToResource,
     PickUp,
     MoveToTarget,
-    DropOff
+    DropOff,
+    Blocked
 }
 
 public enum MoveMode { Idle, Walk, Run, Exhausted }
+public enum FairyEffectType { Dust, Heart, Exhaust }
+
+[System.Serializable]
+public class EffectEntry
+{
+    public FairyEffectType type;
+    public ParticleSystem particle;
+}
 
 public class Fairy : MonoBehaviour
 {
@@ -23,12 +32,12 @@ public class Fairy : MonoBehaviour
     private int pathIndex = 0;
 
     private GameObject carriedItem = null;
-    public Transform carryPoint; // ÄáÀ» µé À§Ä¡ (ºó GameObject)
+    public Transform carryPoint; // ???? ?? ???? (?? GameObject)
     private bool hasDropped = false;
 
 
     [Header("fairyMoveController")]
-    [SerializeField] private float moveSpeed = 1f; // ¾È¾²Áö¸¸ ³ªÁß¿¡ °öÇÒ¼öµµÀÖÀ¸´Ï ³²°ÜµÒ
+    [SerializeField] private float moveSpeed = 1f; // ???????? ?????? ?????????????? ??????
     [SerializeField] private float walkSpeed = 1f;
     [SerializeField] private float runSpeed = 2f;
     [SerializeField] private float stamina = 5f; // 0.0 ~ 1.0
@@ -36,18 +45,46 @@ public class Fairy : MonoBehaviour
     [SerializeField] private float staminaRegenRate = 0.1f; // per second
 
 
+    [SerializeField] private List<EffectEntry> effectEntries;
+
+    [SerializeField] private float avoidDistance = 0.5f;
+    [SerializeField] private float avoidStrength = 1.0f;
+
+    [SerializeField] private float idSeed;
+    [SerializeField] private float noiseMagnitude = 1.0f;
+
     private MoveMode moveMode = MoveMode.Walk;
     private float modeSwitchTimer = 0f;
+
+    private Dictionary<FairyEffectType, ParticleSystem> effects;
+
+    void Awake()
+    {
+        effects = new();
+        foreach (var entry in effectEntries)
+        {
+            if (!effects.ContainsKey(entry.type))
+            {
+                effects.Add(entry.type, entry.particle);
+            }
+        }
+
+        idSeed = Random.Range(0f, 1000f);
+    }
 
     void Update()
     {
         switch (state)
         {
             case FairyState.MoveToResource:
+                moveMode = MoveMode.Run;
                 HandleMovement();
+                AvoidOtherFairies();
                 break;
             case FairyState.MoveToTarget:
+                moveMode = MoveMode.Walk;
                 HandleMovement();
+                AvoidOtherFairies();
                 break;
 
             case FairyState.PickUp:
@@ -56,6 +93,9 @@ public class Fairy : MonoBehaviour
 
             case FairyState.DropOff:
                 PerformDropOff();
+                break;
+            case FairyState.Blocked:
+                // ì•„ë¬´ê²ƒë„ ì•ˆí•¨, ê²½ë¡œ ê°±ì‹  ê¸°ë‹¤ë¦¼
                 break;
         }
         //if (bean == null) state = FairyState.Waiting;
@@ -66,13 +106,13 @@ public class Fairy : MonoBehaviour
     {
         if (newPath == null || newPath.Count == 0) return;
 
-        // toTargetÀÏ °æ¿ì ¡æ °æ·Î¸¦ µÚÁı´Â´Ù
+        // toTarget?? ???? ?? ?????? ????????
         path = new List<Vector3>(newPath);
         if (!toResource)
         {
             path.Reverse();
         }
-        // °¡Àå °¡±î¿î ÁöÁ¡ Ã£±â (or ±×³É 0¿¡¼­ ½ÃÀÛÇØµµ µÊ)
+        // ???? ?????? ???? ???? (or ???? 0???? ???????? ??)
         float shortestDistance = float.MaxValue;
         int closestIndex = 0;
 
@@ -86,13 +126,13 @@ public class Fairy : MonoBehaviour
             }
         }
 
-        // Ç×»ó ¾Õ¿¡¼­ºÎÅÍ ½ÃÀÛÇØµµ µÇ°í, closestIndex ½áµµ OK
+        // ???? ?????????? ???????? ????, closestIndex ???? OK
         pathIndex = closestIndex;
         state = toResource ? FairyState.MoveToResource : FairyState.MoveToTarget;
 
-        Debug.Log($"[SetPath] Direction: {(toResource ? "A ¡æ B" : "B ¡æ A")}, pathIndex = {pathIndex}, pathCount = {path.Count}, FirstPoint: {path[0]}, LastPoint: {path[^1]}");
+        Debug.Log($"[SetPath] Direction: {(toResource ? "A ?? B" : "B ?? A")}, pathIndex = {pathIndex}, pathCount = {path.Count}, FirstPoint: {path[0]}, LastPoint: {path[^1]}");
     }
-
+    Vector3 tar;
     private void HandleMovement()
     {
         if (path == null || pathIndex >= path.Count) return;
@@ -107,10 +147,18 @@ public class Fairy : MonoBehaviour
         };
 
 
-        Vector3 target = path[pathIndex];
+        Vector3 target = path[pathIndex]+ GetNoisyOffset();
         transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
 
         Vector3 direction = target - transform.position;
+        tar = direction;
+        if (IsBlockedByObstacle(direction))
+        {
+            // ë©ˆì¶¤ ìƒíƒœë¡œ ì „í™˜
+            state = FairyState.Blocked;
+            Debug.Log("ìš”ì •ì´ ë§‰í˜”ì–´ìš”!");
+            return;
+        }
 
         if (direction.sqrMagnitude > 0.001f)
         {
@@ -121,11 +169,12 @@ public class Fairy : MonoBehaviour
             pathIndex++;
             if (pathIndex >= path.Count)
             {
-                // ´ÙÀ½ »óÅÂ·Î ÀüÈ¯
+                // ???? ?????? ????
                 if (state == FairyState.MoveToResource) state = FairyState.PickUp;
                 else if (state == FairyState.MoveToTarget) state = FairyState.DropOff;
             }
         }
+
     }
 
     private void PerformPickup()
@@ -139,17 +188,17 @@ public class Fairy : MonoBehaviour
                 bean.transform.localPosition = Vector3.zero;
                 carriedItem = bean;
 
-                Debug.Log("Äá Áı¾úÀ½");
+                Debug.Log("?? ??????");
 
-                // ÄáÀ» ÁıÀº ÈÄ »óÅÂ ÀüÀÌ: ¸ñÀûÁö·Î Ãâ¹ß
+                // ???? ???? ?? ???? ????: ???????? ????
                 SetPath(GameManager.Instance.GetLatestPath(), false);
                 hasDropped = false;
 
             }
             else
             {
-                Debug.Log("ÀÚ¿øÀÌ ¾øÀ½!");
-                state = FairyState.Idle; // ÀÚ¿øÀÌ ¾øÀ¸¸é ÀÏ´Ü ´ë±â
+                Debug.Log("?????? ????!");
+                state = FairyState.Idle; // ?????? ?????? ???? ????
             }
         }
     }
@@ -162,9 +211,9 @@ public class Fairy : MonoBehaviour
             var dropTarget = GameManager.Instance.GetDeliveryPoint();
             dropTarget.ReceiveBean(carriedItem);
             carriedItem = null;
-            Debug.Log("Äá ¹è´Ş ¿Ï·á!");
+            Debug.Log("?? ???? ????!");
 
-            ScoreManager.Instance.AddScore(); // Á¡¼ö Ãß°¡!
+            ScoreManager.Instance.AddScore(); // ???? ????!
         }
 
         state = FairyState.Idle;
@@ -182,28 +231,19 @@ public class Fairy : MonoBehaviour
         switch (moveMode)
         {
             case MoveMode.Run:
+                PlayEffect(FairyEffectType.Dust);
                 stamina -= staminaDrainRate * Time.deltaTime;
                 if (stamina <= 0.01f)
                 {
                     stamina = 0f;
                     moveMode = MoveMode.Exhausted;
-                    modeSwitchTimer = Random.Range(.2f, 1.0f); // ¼û °í¸£±â ½Ã°£
-                }
-                if (stamina >= 0.3f && Random.value < 0.02f)
-                {
-                    moveMode = MoveMode.Walk;
+                    modeSwitchTimer = Random.Range(.2f, 1.0f); // ?? ?????? ????
                 }
                 break;
 
             case MoveMode.Walk:
                 stamina += staminaRegenRate * Time.deltaTime;
                 stamina = Mathf.Clamp01(stamina);
-
-                // ¾à°£ÀÇ ·£´ı¼ºÀ¸·Î ´Ş¸®±â ½ÃÀÛ
-                if (stamina >= 0.3f && Random.value < 0.02f)
-                {
-                    moveMode = MoveMode.Run;
-                }
                 break;
 
             case MoveMode.Exhausted:
@@ -225,6 +265,53 @@ public class Fairy : MonoBehaviour
     private void OnGUI()
     {
         GUI.Label(new Rect(10, 10 + 20 * GetInstanceID(), 200, 20), $"[Fairy] Mode: {moveMode}, Stamina: {stamina:F2}");
+    }
+
+    public void PlayEffect(FairyEffectType type)
+    {
+        foreach (var kvp in effects)
+        {
+            if (kvp.Key == type)
+            {
+                if (!kvp.Value.isPlaying) kvp.Value.Play();
+            }
+            else
+            {
+                if (kvp.Value.isPlaying) kvp.Value.Stop();
+            }
+        }
+    }
+
+    private void AvoidOtherFairies()
+    {
+        foreach (var other in GameManager.Instance.fairies)
+        {
+            if (other == this) continue;
+
+            float dist = Vector3.Distance(transform.position, other.transform.position);
+            if (dist < avoidDistance && dist > 0.01f)
+            {
+                Vector3 pushDir = (transform.position - other.transform.position).normalized;
+                transform.position += pushDir * avoidStrength * Time.deltaTime;
+            }
+        }
+    }
+    private Vector3 GetNoisyOffset()
+    {
+        float x = Mathf.PerlinNoise(Time.time * 0.5f, idSeed) - 0.5f;
+        float z = Mathf.PerlinNoise(Time.time * 0.5f + 100f, idSeed + 1f) - 0.5f;
+
+        return new Vector3(x, 0, z) * 1.5f; // 0.3fëŠ” ë…¸ì´ì¦ˆ ê°•ë„
+    }
+    private bool IsBlockedByObstacle(Vector3 direction)
+    {
+        return Physics.Raycast(transform.position, direction.normalized, out RaycastHit hit, 0.6f)
+            && hit.collider.CompareTag("Obstacle");
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.DrawLine(transform.position, tar);
     }
 }
 
