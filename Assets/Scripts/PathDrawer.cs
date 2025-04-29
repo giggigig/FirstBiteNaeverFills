@@ -13,6 +13,7 @@ public class PathDrawer : MonoBehaviour
     }
 [SerializeField] private MeshRenderer startPointRenderer;
 [SerializeField] private MeshRenderer endPointRenderer;
+    [SerializeField] private LayerMask drawingSurfaceMask;
 
     public LineRenderer mainLineRenderer;
     public LineRenderer previewLineRenderer;
@@ -25,7 +26,13 @@ public class PathDrawer : MonoBehaviour
     private Vector3 mouseDownWorldPos;
     private Vector3 mouseUpWorldPos;
 
+   // [SerializeField] private GameObject pathDrawingButtonUI; // 버튼 연결
+    private bool isPathDrawingMode = false; // 현재 토글 상태
 
+    public void SetPathDrawMode()
+    {
+        isPathDrawingMode = isPathDrawingMode ? false : true; // 토글 상태 반전
+    }
     void Awake()
     {
         mainLineRenderer = GetComponent<LineRenderer>();
@@ -38,18 +45,28 @@ public class PathDrawer : MonoBehaviour
         previewLineRenderer.useWorldSpace = true;
         previewLineRenderer.widthMultiplier = 2f;
 
-        // ??????? ????
+        // 머티리얼 설정
         // lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
         previewLineRenderer.startColor = Color.green;
         previewLineRenderer.endColor = Color.green;
     }
     void Update()
     {
+        if (!isPathDrawingMode) return;
+
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             mouseDownWorldPos = Mouse.current.position.ReadValue();
-            touchedStartPoint = CheckStartPoint();
-            UpdatePreviewLine(); // ????
+            // 마우스 누를 때 스타트/엔드 포인트 체크
+            bool touchedStartNow = CheckStartPoint();
+            bool touchedEndNow = CheckEndPoint();
+
+            // 각각 true이면 true 저장
+            if (touchedStartNow) touchedStartPoint = true;
+            if (touchedEndNow) touchedEndPoint = true;
+
+
+            UpdatePreviewLine(); // 초기화
         }
         if (Mouse.current.leftButton.isPressed)
         {
@@ -65,7 +82,12 @@ public class PathDrawer : MonoBehaviour
 
         if (Mouse.current.leftButton.wasReleasedThisFrame) {
 
-            touchedEndPoint = CheckEndPoint();
+            // 마우스 떼면서 추가로 스타트/엔드 체크
+            bool touchedStartNow = CheckStartPoint();
+            bool touchedEndNow = CheckEndPoint();
+
+            if (touchedStartNow) touchedStartPoint = true;
+            if (touchedEndNow) touchedEndPoint = true;
 
             if (touchedStartPoint && touchedEndPoint)
             {
@@ -73,6 +95,8 @@ public class PathDrawer : MonoBehaviour
 
                 GameManager.Instance.StoreLatestPath(sorted);
                 GameManager.Instance.UpdatePathForAllFairies(sorted);
+
+                GameManager.Instance.CalculateAndDisplayAverageTravelTime(sorted); //
 
                 ApplyToMainLine();
                 if (!GameManager.Instance.isStarting)
@@ -83,13 +107,36 @@ public class PathDrawer : MonoBehaviour
             }
             else
             {
-                Debug.Log("??? ???! previewLineRenderer ????");
+                Debug.Log("무효 경로! previewLineRenderer  제거");
             }
 
             ClearPreviewLine();
+            touchedStartPoint = false;
+            touchedEndPoint = false;
         }
     }
+    /// <summary>
+    /// 공용 raycast함수
+    /// </summary>
+    /// <param name="hitPoint"></param>
+    /// <returns></returns>
+    private bool RaycastToSurface(out Vector3 hitPoint)
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, drawingSurfaceMask))
+        {
+            hitPoint = hit.point;
+            return true;
+        }
+        hitPoint = Vector3.zero;
+        return false;
+    }
 
+    public void TogglePathDrawing()
+    {
+        isPathDrawingMode = !isPathDrawingMode;
+        Debug.Log($"Path Drawing Mode: {(isPathDrawingMode ? "ON" : "OFF")}");
+    }
     public List<Vector3> GetPath() => drawnPath;
 
 
@@ -111,7 +158,7 @@ public class PathDrawer : MonoBehaviour
         float distToA = Vector3.Distance(start, resourcePos);
         float distToB = Vector3.Distance(start, deliveryPos);
 
-        // ???? ???????? B?? ?? ?????? ?? ??? ??????
+        // 만약 시작점이 B에 더 가까우면 → 경로 뒤집기
         if (distToB > distToA)
         {
             drawnPath.Reverse();
@@ -124,7 +171,7 @@ public class PathDrawer : MonoBehaviour
     Vector3 GetMouseWorldPosition()
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hitInfo))
+        if (Physics.Raycast(ray, out RaycastHit hitInfo, 100f, drawingSurfaceMask))
         {
             return hitInfo.point;
         }

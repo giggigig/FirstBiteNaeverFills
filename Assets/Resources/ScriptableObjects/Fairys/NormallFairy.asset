@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7a93b42f0da5214ea6e519a8cd981e2, type: 3}
+  m_Name: NormallFairy
+  m_EditorClassIdentifier: 
+  fairyName: Normal
+  fairyType: 0
+  baseMoveSpeed: 1
+  fairyMat: {fileID: 2100000, guid: 867ceb76421dd96498bc2d3255960739, type: 2}
+  specialEffectPrefab: {fileID: 0}
+  isRare: 0

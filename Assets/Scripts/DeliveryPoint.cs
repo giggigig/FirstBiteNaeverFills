@@ -7,8 +7,7 @@ public class DeliveryPoint : MonoBehaviour
     public void ReceiveBean(GameObject bean)
     {
         bean.transform.SetParent(null);
-        bean.transform.position = dropOffset.position; // ½Ã°¢ÀûÀ¸·Î ³»·Á³õ´Â À§Ä¡
-        Destroy(bean, 0.5f); // Äá »ç¶óÁö´Â ¿¬Ãâ (¼±ÅÃ)
-        Debug.Log("Äá ¹è´Ş ¿Ï·á!");
+        bean.transform.position = dropOffset.position; // ì‹œê°ì ìœ¼ë¡œ ë‚´ë ¤ë†“ëŠ” ìœ„ì¹˜
+        Destroy(bean, 0.5f); // ì½© ì‚¬ë¼ì§€ëŠ” ì—°ì¶œ (ì„ íƒ)
     }
 }
