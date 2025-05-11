@@ -6,6 +6,8 @@ public class ResourcePoint : MonoBehaviour
 
     public GameObject SpawnBean()
     {
-        return Instantiate(beanPrefab, transform.position, Quaternion.identity);
+        //return Instantiate(beanPrefab, transform.position, Quaternion.identity);
+        return BeanPoolManager.Instance.GetBean(transform.position);
+
     }
 }

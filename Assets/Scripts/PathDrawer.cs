@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 
 public class PathDrawer : MonoBehaviour
 {
+    public static PathDrawer Instance;
     public enum PointType { A, B }
     public class PathPoint : MonoBehaviour
     {
@@ -33,8 +34,13 @@ public class PathDrawer : MonoBehaviour
     {
         isPathDrawingMode = isPathDrawingMode ? false : true; // 토글 상태 반전
     }
+    public bool IsPathDrawingMode() => isPathDrawingMode;
     void Awake()
     {
+
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
+        
         mainLineRenderer = GetComponent<LineRenderer>();
     }
     void Start()

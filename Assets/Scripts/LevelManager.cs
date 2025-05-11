@@ -7,6 +7,7 @@ public class LevelManager : MonoBehaviour
     [SerializeField] private int currentScore = 0;
     [SerializeField] private int[] levelThresholds = { 10, 30, 60, 100 }; // 점수 구간
     [SerializeField] private int maxFairyBonusPerLevel = 2;
+    [SerializeField] private int currentDscore = 0;
 
     void Awake() => Instance = this;
 
@@ -15,6 +16,10 @@ public class LevelManager : MonoBehaviour
         currentScore += amount;
         UpdateScoreUI();
         CheckLevelUp();
+    }
+    public void AddDScore(int amount = 1)
+    {
+        currentDscore += amount;
     }
     private void CheckLevelUp()
     {
@@ -28,7 +33,7 @@ public class LevelManager : MonoBehaviour
     private void UpdateScoreUI()
     {
         // UI 업데이트 로직
-        Debug.Log($"현재 점수: {currentScore}");
+        Debug.Log($"현재 점수: {currentScore}, 배달된 콩:{currentDscore}, 잃어버린콩:{currentDscore-currentScore}");
     }
     private void OnLevelUp()
     {
@@ -38,6 +43,7 @@ public class LevelManager : MonoBehaviour
        //layLevelUpEffect();
         //UpdateLevelUI();
     }
+
 
     [SerializeField] private Material[] skyboxMaterials; // 레벨별 스카이박스
     [SerializeField] private Light directionalLight; // 메인 조명

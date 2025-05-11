@@ -11,7 +11,8 @@ public class GameManager : MonoBehaviour
     }
     public static GameManager Instance;
 
-    public List<Fairy> fairies = new List<Fairy>(); // 요정 여러 명 관리 가능
+    //public List<Fairy> fairies = new List<Fairy>(); // 요정 여러 명 관리 가능
+    public List<BaseFairy> fairies = new List<BaseFairy>(); // 요정 여러 명 관리 가능
     [SerializeField] private int fairyCount = 0;
 
     public PathDrawer pathDrawer; // 직접 연결도 가능
@@ -43,7 +44,8 @@ public class GameManager : MonoBehaviour
     }
     void Start()
     {
-        fairies = new List<Fairy>(FindObjectsByType<Fairy>(FindObjectsSortMode.None));
+        //fairies = new List<Fairy>(FindObjectsByType<Fairy>(FindObjectsSortMode.None));
+        fairies = new List<BaseFairy>(FindObjectsByType<BaseFairy>(FindObjectsSortMode.None));
         Debug.Log($"[GameManager] 요정 수: {fairies.Count}");
     }
 
@@ -145,7 +147,8 @@ public class GameManager : MonoBehaviour
         GameObject fairyObj = Instantiate(fairyPrefab, spawnPos, Quaternion.identity);
 
         // 3. 요정 초기화
-        Fairy fairy = fairyObj.GetComponent<Fairy>();
+        //Fairy fairy = fairyObj.GetComponent<Fairy>();
+        BaseFairy fairy = fairyObj.GetComponent<BaseFairy>();
         if (fairy != null)
         {
             fairy.Initialize(selectedData);

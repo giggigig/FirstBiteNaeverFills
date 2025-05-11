@@ -126,13 +126,13 @@ public class Fairy : MonoBehaviour
                 moveMode = MoveMode.Run;
                 HandleMovement();
                 AvoidOtherFairies();
-                CheckStumble();
+                //CheckStumble();
                 break;
             case FairyState.MoveToTarget:
                 moveMode = MoveMode.Walk;
                 HandleMovement();
                 AvoidOtherFairies();
-                CheckStumble();
+                //CheckStumble();
                 break;
 
             case FairyState.PickUp:
@@ -284,7 +284,7 @@ public class Fairy : MonoBehaviour
         if (carriedItem != null)
         {
             var dropTarget = GameManager.Instance.GetDeliveryPoint();
-            dropTarget.ReceiveBean(carriedItem);
+            //dropTarget.ReceiveBean(carriedItem);
             carriedItem = null;
             //Debug.Log("콩 배달 완료!");
 
@@ -527,10 +527,7 @@ public class Fairy : MonoBehaviour
         Debug.Log($"[Fairy] 콩 다시 주웠다! ({name})");
         UpdateAnimator();
     }
-    private void OnDrawGizmos()
-    {
-        Gizmos.DrawLine(transform.position, tar);
-    }
+
     public void OnStumbleEnd()
     {
         isStumbling = false;
